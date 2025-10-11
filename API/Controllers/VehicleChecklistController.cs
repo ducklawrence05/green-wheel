@@ -65,6 +65,7 @@ namespace API.Controllers
 
         [HttpDelete("image")]
         [RoleAuthorize(RoleName.Staff)]
+        [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> DeleteChecklistItemImage(Guid itemId)
         {
             var result = await _imageService.DeleteChecklistItemImageAsync(itemId);

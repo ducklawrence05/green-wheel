@@ -83,7 +83,7 @@ namespace API
             builder.Services.AddScoped<IModelImageRepository, ModelImageRepository>();
             builder.Services.AddScoped<IVehicleSegmentRepository, VehicleSegmentRepository>();
             builder.Services.AddScoped<ICloudinaryRepository, CloudinaryRepository>();
-            builder.Services.AddScoped<ISupportRequestRepository, SupportRequestRepository>();
+            builder.Services.AddScoped<ITicketRepository, TicketRepository>();
             builder.Services.AddScoped<IVehicleCheckListRepository, VehicleChecklistRepository>();
             builder.Services.AddScoped<IVehicleChecklistItemRepository, VehicleChecklistItemRepository>();
             builder.Services.AddScoped<IStationFeedbackRepository, StationFeedbackRepository>();
@@ -101,7 +101,7 @@ namespace API
             builder.Services.AddScoped<IDriverLicenseService, DriverLicenseService>();
             builder.Services.AddScoped<IModelImageService, ModelImageService>();
             builder.Services.AddScoped<IPhotoService, CloudinaryService>();
-            builder.Services.AddScoped<ISupportRequestService, SupportRequestService>();
+            builder.Services.AddScoped<ITicketService, TicketService>();
             builder.Services.AddScoped<IStationFeedbackService, StationFeedbackService>();
             builder.Services.AddScoped<IChecklistItemImageService, ChecklistItemImageService>();
             //Interceptor

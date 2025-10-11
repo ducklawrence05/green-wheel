@@ -13,14 +13,14 @@ namespace API.Controllers
     public class ModelImagesController : ControllerBase
     {
         private readonly IModelImageService _modelImageService;
-        private readonly IVehicleModelService _vehicleModelService;
+        private readonly IVehicleModelService _vehicleMBodelService;
 
         public ModelImagesController(
             IModelImageService modelImageService,
             IVehicleModelService vehicleModelService)
         {
             _modelImageService = modelImageService;
-            _vehicleModelService = vehicleModelService;
+            _vehicleMBodelService = vehicleModelService;
         }
 
         // ---------- SUB-IMAGES (gallery) ----------
@@ -48,14 +48,15 @@ namespace API.Controllers
         [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> UploadMainImage([FromRoute] Guid modelId, [FromForm(Name = "file")] IFormFile file)
         {
-            var imageUrl = await _vehicleModelService.UploadMainImageAsync(modelId, file);
+            var imageUrl = await _vehicleMBodelService.UploadMainImageAsync(modelId, file);
             return Ok(new { data = new { modelId, imageUrl }, message = Message.CloudinaryMessage.UploadSuccess });
         }
 
         [HttpDelete("main-image")]
+        [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> DeleteMainImage([FromRoute] Guid modelId)
         {
-            await _vehicleModelService.DeleteMainImageAsync(modelId);
+            await _vehicleMBodelService.DeleteMainImageAsync(modelId);
             return Ok(new { message = Message.CloudinaryMessage.DeleteSuccess });
         }
 

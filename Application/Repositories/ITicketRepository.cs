@@ -4,10 +4,12 @@ using Domain.Entities;
 
 namespace Application.Repositories
 {
-    public interface ISupportRequestRepository : IGenericRepository<Ticket>
+    public interface ITicketRepository : IGenericRepository<Ticket>
     {
         Task<PageResult<Ticket>> GetAllAsync(PaginationParams pagination);
 
         Task<IEnumerable<Ticket>> GetByCustomerAsync(Guid customerId);
+
+        Task<PageResult<Ticket>> GetEscalatedAsync(PaginationParams pagination);
     }
 }

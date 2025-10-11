@@ -1,11 +1,10 @@
 ﻿using Application.Constants;
-using Application.Dtos.Common.Request;
-using Application.Dtos.RentalContract.Respone;
+using Application.Dtos.CitizenIdentity.Response;
+using Application.Dtos.DriverLicense.Response;
 using Application.Dtos.User.Request;
 using Application.Dtos.User.Respone;
-using Application.Dtos.UserSupport.Request;
-using Google.Apis.Auth;
 using Domain.Entities;
+using Google.Apis.Auth;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 
@@ -42,7 +41,6 @@ namespace Application.Abstractions
 
         Task<Dictionary<string, string>> LoginWithGoogle(GoogleJsonWebSignature.Payload payload);
 
-
         Task<UserProfileViewRes> GetMeAsync(ClaimsPrincipal userClaims);
 
         Task UpdateMeAsync(ClaimsPrincipal userClaims, UserUpdateReq userUpdateReq);
@@ -53,18 +51,22 @@ namespace Application.Abstractions
 
         Task CheckDupEmailAsync(string email);
 
-        Task<object> UploadCitizenIdAsync(Guid userId, IFormFile file);
+        Task<CitizenIdentityRes> UploadCitizenIdAsync(Guid userId, IFormFile file);
 
-        Task<object> UploadDriverLicenseAsync(Guid userId, IFormFile file);
+        Task<DriverLicenseRes> UploadDriverLicenseAsync(Guid userId, IFormFile file);
 
-        Task<object?> GetMyCitizenIdentityAsync(Guid userId);
+        Task<CitizenIdentityRes?> GetMyCitizenIdentityAsync(Guid userId);
 
-        Task<object?> GetMyDriverLicenseAsync(Guid userId);
+        Task<DriverLicenseRes?> GetMyDriverLicenseAsync(Guid userId);
+
         Task<Guid> CreateAnounymousAccount(CreateUserReq req);
+
         Task<UserProfileViewRes> GetUserByPhoneAsync(string phone);
+
         Task<IEnumerable<User>> GetAllUsersAsync();
+
         Task<UserProfileViewRes> GetByCitizenIdentityAsync(string idNumber);
+
         Task<UserProfileViewRes> GetByDriverLicenseAsync(string number);
-        
     }
 }

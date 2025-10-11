@@ -11,6 +11,7 @@ namespace Infrastructure.ApplicationDbContext;
 public partial class GreenWheelDbContext : DbContext, IGreenWheelDbContext
 {
     private readonly UpdateTimestampInterceptor _updateInterceptor;
+
     public GreenWheelDbContext()
     {
     }
@@ -72,10 +73,12 @@ public partial class GreenWheelDbContext : DbContext, IGreenWheelDbContext
     public virtual DbSet<VehicleSegment> VehicleSegments { get; set; }
 
     public DbSet<T> Set<T>() where T : class, IEntity => base.Set<T>();
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         optionsBuilder.AddInterceptors(_updateInterceptor);
     }
+
     private static string ToSnakeCase(string name)
     {
         if (string.IsNullOrEmpty(name)) return name;
@@ -88,6 +91,7 @@ public partial class GreenWheelDbContext : DbContext, IGreenWheelDbContext
 
         return result.ToLower();
     }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Brand>(entity =>

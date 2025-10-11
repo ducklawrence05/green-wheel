@@ -9,7 +9,7 @@ namespace Application.Constants
     public enum TicketStatus
     {
         Pending = 0,
-        Resolve = 1,
+        Resolved = 1,
         EscalatedToAdmin = 2
     }
 }
