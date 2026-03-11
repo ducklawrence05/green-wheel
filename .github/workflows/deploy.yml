@@ -19,14 +19,26 @@ jobs:
                   username: ${{ secrets.VPS_USERNAME }}
                   key: ${{ secrets.VPS_SSH_KEY }}
                   script: |
-                      if [ ! -d "green-wheel-be" ]; then
-                        git clone https://github.com/${{ github.repository }}.git green-wheel-be
+                      # 1. Đảm bảo thư mục tồn tại và vào đúng chỗ
+                      mkdir -p ~/green-wheel-be
+                      cd ~/green-wheel-be
+
+                      # 2. Xử lý logic Git (Dùng reset --hard để tránh xung đột code trên server)
+                      if [ ! -d ".git" ]; then
+                        echo "Thư mục chưa có Git, bắt đầu clone..."
+                        # Clone tạm ra ngoài rồi chuyển vào để tránh lỗi thư mục không trống do file .env
+                        git clone https://github.com/${{ github.repository }}.git .temp_repo
+                        cp -rn .temp_repo/. .
+                        rm -rf .temp_repo
+                      else
+                        echo "Đã có Git, tiến hành pull code mới nhất..."
+                        git fetch --all
+                        git reset --hard origin/main
                       fi
 
-                      cd green-wheel-be
-
-                      git pull origin main
-
+                      # 3. Khởi động hệ thống Docker
+                      # Sử dụng docker compose (không dấu gạch ngang) cho các bản Ubuntu mới
                       docker compose -f docker-compose.prod.yml up -d --build
 
+                      # 4. Dọn dẹp các Image cũ để tránh đầy ổ cứng VPS
                       docker image prune -f
