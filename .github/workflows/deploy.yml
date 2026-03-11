@@ -1,146 +1,32 @@
-name: Build & Deploy to Azure Container Apps
+name: Deploy to VPS
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
-
-permissions:
-  contents: read
-
-env:
-  RG: rg-greenwheel-prod
-  LOCATION: southeastasia
-  ENV_NAME: gw-aca-env
-  APP_NAME: greenwheel-backend
-  IMAGE_NAME: greenwheel-backend
-  PORT: 8080
+    push:
+        branches:
+            - main
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
+    deploy:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout source code
+              uses: actions/checkout@v4
 
-    steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
+            - name: Deploy to VPS via SSH
+              uses: appleboy/ssh-action@master
+              with:
+                  host: ${{ secrets.VPS_HOST }}
+                  username: ${{ secrets.VPS_USERNAME }}
+                  key: ${{ secrets.VPS_SSH_KEY }}
+                  script: |
+                      if [ ! -d "green-wheel-be" ]; then
+                        git clone https://github.com/${{ github.repository }}.git green-wheel-be
+                      fi
 
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+                      cd green-wheel-be
 
-      - name: Get ACR registry
-        id: acr
-        run: |
-          REGISTRY=$(az acr show -n "${{ secrets.ACR_NAME }}" --query loginServer -o tsv)
-          echo "REGISTRY=$REGISTRY" >> $GITHUB_ENV
+                      git pull origin main
 
-      - name: ACR Login (with username/password)
-        run: |
-          az acr login \
-            --name ${{ secrets.ACR_NAME }} \
-            --username '${{ secrets.ACR_USERNAME }}' \
-            --password '${{ secrets.ACR_PASSWORD }}'
+                      docker compose -f docker-compose.prod.yml up -d --build
 
-      - name: Build & Push Docker Image
-        run: |
-          IMAGE_TAG=${{ github.sha }}
-          docker build -t $IMAGE_NAME:prod -f Dockerfile .
-          docker tag $IMAGE_NAME:prod $REGISTRY/$IMAGE_NAME:$IMAGE_TAG
-          docker push $REGISTRY/$IMAGE_NAME:$IMAGE_TAG
-
-      - name: Ensure Container Apps Environment exists
-        run: |
-          az containerapp env show -g $RG -n $ENV_NAME || \
-          az containerapp env create -g $RG -n $ENV_NAME -l $LOCATION
-
-      - name: Create Container App if not exists
-        run: |
-          if ! az containerapp show -g $RG -n $APP_NAME >/dev/null 2>&1; then
-            az containerapp create \
-              -g $RG \
-              -n $APP_NAME \
-              --environment $ENV_NAME \
-              --image mcr.microsoft.com/dotnet/aspnet:8.0 \
-              --system-assigned \
-              --ingress external \
-              --target-port $PORT
-          fi
-
-      - name: Deploy Container App
-        run: |
-          IMAGE="$REGISTRY/$IMAGE_NAME:${{ github.sha }}"
-          echo "Deploying image: $IMAGE"
-
-          az containerapp update \
-            -g $RG -n $APP_NAME \
-            --image "$IMAGE" \
-            --set-env-vars \
-              ASPNETCORE_ENVIRONMENT=Production \
-              FRONTEND_ORIGIN='${{ secrets.FRONTEND_ORIGIN }}' \
-              FRONTEND_PUBLIC_ORIGIN='${{ secrets.FRONTEND_PUBLIC_ORIGIN }}' \
-              MSSQL_CONNECTION_STRING='Server=tcp:${{ secrets.AZURE_SQL_SERVER }},1433;Database=${{ secrets.AZURE_SQL_DB }};User Id=${{ secrets.AZURE_SQL_USER }};Password=${{ secrets.AZURE_SQL_PASSWORD }};TrustServerCertificate=True;' \
-              REDIS_CONFIGURATION='${{ secrets.AZURE_REDIS_HOST }}:6380,password=${{ secrets.AZURE_REDIS_KEY }},ssl=True,abortConnect=False' \
-              REDIS_INSTANCE_NAME='${{ secrets.REDIS_INSTANCE_NAME }}' \
-              \
-              JwtSettings__AccessTokenSecret='${{ secrets.JWT_ACCESS_TOKEN_SECRET }}' \
-              JwtSettings__AccessTokenExpiredTime='${{ secrets.JWT_ACCESS_TOKEN_EXPIRED_TIME }}' \
-              JwtSettings__RefreshTokenSecret='${{ secrets.JWT_REFRESH_TOKEN_SECRET }}' \
-              JwtSettings__RefreshTokenExpiredTime='${{ secrets.JWT_REFRESH_TOKEN_EXPIRED_TIME }}' \
-              JwtSettings__RegisterTokenSecret='${{ secrets.JWT_REGISTER_TOKEN_SECRET }}' \
-              JwtSettings__RegisterTokenExpiredTime='${{ secrets.JWT_REGISTER_TOKEN_EXPIRED_TIME }}' \
-              JwtSettings__ForgotPasswordTokenSecret='${{ secrets.JWT_FORGOT_PASSWORD_TOKEN_SECRET }}' \
-              JwtSettings__ForgotPasswordTokenExpiredTime='${{ secrets.JWT_FORGOT_PASSWORD_TOKEN_EXPIRED_TIME }}' \
-              JwtSettings__SetPasswordTokenSecret='${{ secrets.JWT_SET_PASSWORD_TOKEN_SECRET }}' \
-              JwtSettings__SetPasswordTokenExpiredTime='${{ secrets.JWT_SET_PASSWORD_TOKEN_EXPIRED_TIME }}' \
-              JwtSettings__Issuer='${{ secrets.JWT_ISSUER }}' \
-              JwtSettings__Audience='${{ secrets.JWT_AUDIENCE }}' \
-              \
-              EmailSettings__SmtpServer='${{ secrets.EMAIL_SMTP_SERVER }}' \
-              EmailSettings__Port='${{ secrets.EMAIL_PORT }}' \
-              EmailSettings__SenderName='${{ secrets.EMAIL_SENDER_NAME }}' \
-              EmailSettings__SenderEmail='${{ secrets.EMAIL_SENDER_EMAIL }}' \
-              EmailSettings__Username='${{ secrets.EMAIL_USERNAME }}' \
-              EmailSettings__Password='${{ secrets.EMAIL_PASSWORD }}' \
-              \
-              GoogleAuthSettings__ClientID='${{ secrets.GOOGLE_CLIENT_ID }}' \
-              GoogleAuthSettings__ClientSecret='${{ secrets.GOOGLE_CLIENT_SECRET }}' \
-              \
-              CloudinarySettings__CloudName='${{ secrets.CLOUDINARY_CLOUD_NAME }}' \
-              CloudinarySettings__ApiKey='${{ secrets.CLOUDINARY_API_KEY }}' \
-              CloudinarySettings__ApiSecret='${{ secrets.CLOUDINARY_API_SECRET }}' \
-              CloudinarySettings__DefaultFolder='${{ secrets.CLOUDINARY_DEFAULT_FOLDER }}' \
-              \
-              Gemini__ApiKey='${{ secrets.GEMINI_API_KEY }}' \
-              Gemini__ModelName='${{ secrets.GEMINI_MODEL_NAME }}' \
-              Gemini__ApiBaseUrl='${{ secrets.GEMINI_API_BASE_URL }}' \
-              Gemini__MaxImageBytes='${{ secrets.GEMINI_MAX_IMAGE_BYTES }}' \
-              Gemini__HttpTimeoutSeconds='${{ secrets.GEMINI_HTTP_TIMEOUT_SECONDS }}' \
-              \
-              MomoSettings__PartnerCode='${{ secrets.MOMO_PARTNER_CODE }}' \
-              MomoSettings__AccessKey='${{ secrets.MOMO_ACCESS_KEY }}' \
-              MomoSettings__SecretKey='${{ secrets.MOMO_SECRET_KEY }}' \
-              MomoSettings__IpnUrl='${{ secrets.MOMO_IPN_URL }}' \
-              MomoSettings__Endpoint='${{ secrets.MOMO_ENDPOINT }}' \
-              MomoSettings__RequestType='${{ secrets.MOMO_REQUEST_TYPE }}' \
-              MomoSettings__Lang='${{ secrets.MOMO_LANG }}' \
-              MomoSettings__OrderExpireTime='${{ secrets.MOMO_ORDER_EXPIRE_TIME }}' \
-              MomoSettings__Ttl='${{ secrets.MOMO_TTL }}' \
-              \
-              OTPSettings__OtpTtl='${{ secrets.OTP_TTL }}' \
-              OTPSettings__OtpRateLimit='${{ secrets.OTP_RATE_LIMIT }}' \
-              OTPSettings__OtpRateLimitTtl='${{ secrets.OTP_RATE_LIMIT_TTL }}' \
-              OTPSettings__OtpAttempts='${{ secrets.OTP_ATTEMPTS }}' \
-              OTPSettings__OtpAttemptsTtl='${{ secrets.OTP_ATTEMPTS_TTL }}' \
-              \
-              RateLimitSettings__TokenLimit='${{ secrets.TOKEN_LIMIT }}' \
-              RateLimitSettings__TokensPerPeriod='${{ secrets.TOKENS_PER_PERIOD }}' \
-              RateLimitSettings__ReplenishmentPeriod='${{ secrets.REPLENISHMENT_PERIOD }}' \
-              RateLimitSettings__QueueLimit='${{ secrets.QUEUE_LIMIT }}'
-
-      - name: Show app URL
-        run: |
-          FQDN=$(az containerapp show -g $RG -n $APP_NAME --query properties.configuration.ingress.fqdn -o tsv)
-          echo "Deployed successfully!"
-          echo "URL: https://$FQDN"
+                      docker image prune -f
