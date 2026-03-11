@@ -33,12 +33,22 @@ public class Program
     public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-        if (builder.Environment.IsDevelopment())
+
+        // Thay vì check IsDevelopment, hãy check xem file .env có tồn tại không thì load luôn
+        var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
+        if (File.Exists(envPath))
         {
-            Env.Load("../.env");
-            builder.Configuration.AddJsonFile("appsettings.json", optional: true);
-            builder.Configuration.AddJsonFile($"appsettings.Development.json", optional: true);
+            Env.Load(envPath);
         }
+        // Nếu trên VPS file .env nằm ở thư mục cha (../.env) thì check thêm:
+        else if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "..", ".env")))
+        {
+            Env.Load(Path.Combine(Directory.GetCurrentDirectory(), "..", ".env"));
+        }
+
+        // Luôn nạp AppSettings và Biến môi trường
+        builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+        builder.Configuration.AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true);
         builder.Configuration.AddEnvironmentVariables();
 
         // Frontend Url
