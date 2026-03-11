@@ -344,11 +344,9 @@ public class Program
             });
         }
         // Configure the HTTP request pipeline.
-        if (app.Environment.IsDevelopment())
-        {
-            app.UseSwagger();
-            app.UseSwaggerUI();
-        }
+        app.UseSwagger();
+        app.UseSwaggerUI();
+        
         app.UseMiddleware<GlobalErrorHandlerMiddleware>();
         // app.UseMiddleware<RateLimitMiddleware>();
         //if (builder.Environment.IsDevelopment())
