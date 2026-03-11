@@ -1,41 +1,60 @@
-version: "3.9"
-
 services:
-  greenwheel-backend:
-    container_name: greenwheel-backend
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: greenwheel-backend:prod
-    ports:
-      - "8080:8080"
-    env_file:
-      - .env
-    environment:
-      ASPNETCORE_ENVIRONMENT: Production
+    greenwheel-backend:
+        container_name: greenwheel-backend
+        build:
+            context: .
+            dockerfile: Dockerfile
+        image: greenwheel-backend:prod
+        ports:
+            - "8080:8080"
+        env_file:
+            - .env
+        environment:
+            ASPNETCORE_ENVIRONMENT: Production
+            DB_CONNECTION_STRING: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};"
+            REDIS_CONFIGURATION: "redis:6379,abortConnect=False"
+            Logging__LogLevel__Default: "Information"
+            Logging__LogLevel__Microsoft: "Warning"
+            Logging__LogLevel__Microsoft.Hosting.Lifetime: "Information"
+        depends_on:
+            redis:
+                condition: service_started
+            postgres:
+                condition: service_healthy
+        volumes:
+            - ./logs:/app/logs
+        restart: always
 
-      # Kết nối tới Azure SQL Database (thay giá trị thật)
-      MSSQL_CONNECTION_STRING: >
-        Server=tcp:${AZURE_SQL_SERVER},1433;
-        Database=${AZURE_SQL_DB};
-        User Id=${AZURE_SQL_USER};
-        Password=${AZURE_SQL_PASSWORD};
-        TrustServerCertificate=True;
+    redis:
+        container_name: greenwheel-redis-prod
+        image: redis:7.0-alpine
+        restart: always
+        volumes:
+            - prod_redis_data:/data
 
-      # Kết nối tới Azure Redis Cache (có SSL và password)
-      REDIS_CONFIGURATION: >
-        ${AZURE_REDIS_HOST}:6380,
-        password=${AZURE_REDIS_KEY},
-        ssl=True,
-        abortConnect=False
+    postgres:
+        container_name: greenwheel-postgres-prod
+        image: postgres:15-alpine
+        restart: always
+        env_file:
+            - .env
+        environment:
+            POSTGRES_USER: ${POSTGRES_USER}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+            POSTGRES_DB: ${POSTGRES_DB}
+        volumes:
+            - prod_postgres_data:/var/lib/postgresql/data
+            - ./init-db:/docker-entrypoint-initdb.d
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}",
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 5
 
-      # Các biến khác nếu cần
-      Logging__LogLevel__Default: Information
-      Logging__LogLevel__Microsoft: Warning
-      Logging__LogLevel__Microsoft.Hosting.Lifetime: Information
-
-    volumes:
-      - ./logs:/app/logs
-
-    restart: always
-
+volumes:
+    prod_redis_data:
+    prod_postgres_data:

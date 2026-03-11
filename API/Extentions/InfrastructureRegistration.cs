@@ -5,11 +5,12 @@ namespace API.Extentions
 {
     public static class InfrastructureRegistration
     {
-        public static void AddInfrastructue(this IServiceCollection services, string mssqlConnectionString)
+        public static void AddInfrastructue(this IServiceCollection services, string connectionString)
         {
             services.AddDbContext<IGreenWheelDbContext, GreenWheelDbContext>(options =>
             {
-                options.UseSqlServer(mssqlConnectionString);
+                // Đổi từ UseSqlServer sang UseNpgsql
+                options.UseNpgsql(connectionString);
             });
         }
     }
